@@ -6,7 +6,7 @@ import requests
 import math
 import plotly.graph_objs as go
 
-class NeuroLink:
+class NeuroxLink:
     def __init__(self, doi: str, cdn_url="https://cdn.neurolibre.org"):
         self.cdn_url = cdn_url
         self.doi = doi
