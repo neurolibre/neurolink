@@ -3,7 +3,7 @@ requires = ["setuptools>=64", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "neurolink"
+name = "neuroxlink"
 dynamic = ["version"]
 description = "An experimental mdast parser to browse MyST articles like cough publishers cough cannot even imagine."
 authors = [
@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/neurolibre/neurolink"
+Homepage = "https://github.com/neurolibre/neuroxlink"
 
 [tool.setuptools_scm]
 version_scheme = "post-release"
