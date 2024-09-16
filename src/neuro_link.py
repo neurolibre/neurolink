@@ -34,7 +34,7 @@ class NeuroLink:
         return "〰️" * math.ceil(len(text) / 2)
         
     def _fetch_config_data(self) -> Dict[str, Any]:
-        config_url = f"{self.cdn_url}.org/config.json"
+        config_url = f"{self.cdn_url}/config.json"
         return self._get_json(config_url)
 
     def _find_project_by_doi(self, projects: List[Dict[str, Any]], doi: str) -> Optional[Dict[str, Any]]:
