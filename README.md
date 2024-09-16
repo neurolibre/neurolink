@@ -1,4 +1,4 @@
-## neurolink
+## neuroxlink
 
 An experimental [mdast](https://github.com/syntax-tree/mdast) parser to have fun with MyST articles.
 
