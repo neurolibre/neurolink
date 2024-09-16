@@ -7,8 +7,8 @@ import math
 import plotly.graph_objs as go
 
 class NeuroLink:
-    def __init__(self, doi: str):
-        self.cdn_url = "https://cdn.neurolibre.org"
+    def __init__(self, doi: str, cdn_url="https://cdn.neurolibre.org"):
+        self.cdn_url = cdn_url
         self.doi = doi
         self.config_data = self._fetch_config_data()
         self.project_data = self._find_project_by_doi(self.config_data['projects'], self.doi)
