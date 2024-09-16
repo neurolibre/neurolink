@@ -8,6 +8,7 @@ import plotly.graph_objs as go
 
 class NeuroLink:
     def __init__(self, doi: str):
+        self.cdn_url = "https://cdn.neurolibre.org"
         self.doi = doi
         self.config_data = self._fetch_config_data()
         self.project_data = self._find_project_by_doi(self.config_data['projects'], self.doi)
@@ -33,23 +34,23 @@ class NeuroLink:
         return "〰️" * math.ceil(len(text) / 2)
         
     def _fetch_config_data(self) -> Dict[str, Any]:
-        config_url = "https://cdn.neurolibre.org/config.json"
+        config_url = f"{self.cdn_url}.org/config.json"
         return self._get_json(config_url)
 
     def _find_project_by_doi(self, projects: List[Dict[str, Any]], doi: str) -> Optional[Dict[str, Any]]:
         return next((project for project in projects if project.get('doi') == doi), None)
 
     def _fetch_article_data(self) -> Dict[str, Any]:
-        content_url = f"https://cdn.neurolibre.org/content/{self.project_data['slug']}/{self.project_data['index']}.json"
+        content_url = f"{self.cdn_url}/content/{self.project_data['slug']}/{self.project_data['index']}.json"
         return self._get_json(content_url)
 
     def _fetch_data(self) -> Dict[str, Any]:
-        config_url = "https://cdn.neurolibre.org/config.json"
+        config_url = f"{self.cdn_url}/config.json"
         config_data = self._get_json(config_url)
         project = self._find_by_doi(config_data['projects'], self.doi)
         if not project:
             raise ValueError(f"No project found with DOI: {self.doi}")
-        content_url = f"https://cdn.neurolibre.org/content/{project['slug']}/{project['index']}.json"
+        content_url = f"{self.cdn_url}/content/{project['slug']}/{project['index']}.json"
         return self._get_json(content_url)
 
     @staticmethod
@@ -64,7 +65,10 @@ class NeuroLink:
             if project.get('doi') == doi:
                 return project
         return None
-    
+        
+    def set_cdn_url(self,url):
+        self.cdn_url = url
+        
     def get_title(self) -> str:
         title = self.project_data.get('title', '')
         subtitle = self.project_data.get('subtitle', '')
@@ -196,7 +200,7 @@ class NeuroLink:
         } if plotly_data else None
 
     def fetch_plotly_data(self, path: str) -> Optional[Dict[str, Any]]:
-        url = f"https://cdn.neurolibre.org{path}"
+        url = f"{self.cdn_url}{path}"
         try:
             response = requests.get(url)
             response.raise_for_status()
