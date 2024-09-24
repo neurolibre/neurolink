@@ -347,9 +347,9 @@ class Paper:
             # Handle cases where x, y, or z might be None
             for key in ['x', 'y', 'z']:
                 if key not in trace_data:
-                    trace_data[key] = [None] * max(len(trace_data.get('x', [])), 
-                                                   len(trace_data.get('y', [])), 
-                                                   len(trace_data.get('z', [])))
+                    trace_data[key] = [None] * max(len(trace_data.get('x', []) or []), 
+                                                   len(trace_data.get('y', []) or []), 
+                                                   len(trace_data.get('z', []) or []))
             
             data_list.append(pd.DataFrame(trace_data))
 
