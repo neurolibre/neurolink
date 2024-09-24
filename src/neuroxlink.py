@@ -83,15 +83,9 @@ class Paper:
         self._print_info()
 
     def _print_info(self):
-        doi = f"🌺 {self.doi} 🌺"
-        print(doi)
-        print(self._create_underline(doi))
-        title = self.get_title()
-        print(title)
-        print(self._create_underline(title))
-
-    def _create_underline(self, text: str) -> str:
-        return "〰️" * math.ceil(len(text) / 2)
+        print(f"🔗 importing {self.doi} from 🌎 {self.cdn_url}")
+        print(self.get_title())
+        print("-------------------------------------")
 
     @staticmethod
     def _find_project_by_doi(projects: List[Dict[str, Any]], doi: str) -> Optional[Dict[str, Any]]:
@@ -288,7 +282,7 @@ class Paper:
     #             return go.Figure(json.loads(plotly_data))
     #     return None
 
-    def get_plotly_obj(self, label: str) -> Optional[go.Figure]:
+    def create_plotly_object_from(self, label: str) -> Optional[go.Figure]:
         fig_data = self.get_plotly_figure_by_label(label)
         if fig_data and 'plotly_data' in fig_data:
             plotly_data = fig_data['plotly_data']
