@@ -83,7 +83,7 @@ class Paper:
         self._print_info()
 
     def _print_info(self):
-        print(f"🔗 importing {self.doi} from 🌎 {self.cdn_url}")
+        print(f"🔗 importing {self.doi} from 🌎 {self.cdn_url}/content/{self.project_data['slug']}/{self.project_data['index']}.json")
         print(self.get_title())
         print("-------------------------------------")
 
@@ -330,7 +330,7 @@ class Paper:
         return None
     
     def get_plotly_data(self, label: str) -> Optional[pd.DataFrame]:
-        fig = self.get_plotly_obj(label)
+        fig = self.create_plotly_object_from(label)
         if fig is None:
             return None
 
