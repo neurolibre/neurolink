@@ -5,12 +5,69 @@ import re
 import requests
 import math
 import plotly.graph_objs as go
+import pandas as pd
+import numpy as np
 
 class NeuroxLink:
-    def __init__(self, doi: str, cdn_url="https://cdn.neurolibre.org"):
+    def __init__(self, cdn_url="https://cdn.neurolibre.org"):
         self.cdn_url = cdn_url
-        self.doi = doi
+        self.papers = PaperCollection()  # Initialize as PaperCollection, not dict
         self.config_data = self._fetch_config_data()
+
+    def _fetch_config_data(self) -> Dict[str, Any]:
+        config_url = f"{self.cdn_url}/config.json"
+        return self._get_json(config_url)
+
+    @staticmethod
+    def _get_json(url: str) -> Dict[str, Any]:
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.json()
+
+    def import_papers(self, dois):
+        if isinstance(dois, str):
+            dois = [dois]
+        for doi in dois:
+            if doi not in self.papers.doi_dict:
+                paper = Paper(doi, self.cdn_url, self.config_data)
+                self.papers.add(paper)
+
+    def set_cdn_url(self, url):
+        self.cdn_url = url
+        self.config_data = self._fetch_config_data()
+        for paper in self.papers:
+            paper.set_cdn_url(url)
+
+class PaperCollection:
+    def __init__(self):
+        self.doi_dict = {}
+        self._index_list = []
+
+    def add(self, paper):
+        doi = paper.doi
+        if doi not in self.doi_dict:
+            self.doi_dict[doi] = paper
+            self._index_list.append(paper)
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._index_list[key]
+        elif isinstance(key, str):
+            return self.doi_dict[key]
+        else:
+            raise TypeError("Index must be an integer or a string (DOI)")
+
+    def __iter__(self):
+        return iter(self._index_list)
+
+    def __len__(self):
+        return len(self._index_list)
+
+class Paper:
+    def __init__(self, doi: str, cdn_url: str, config_data: Dict[str, Any]):
+        self.doi = doi
+        self.cdn_url = cdn_url
+        self.config_data = config_data
         self.project_data = self._find_project_by_doi(self.config_data['projects'], self.doi)
         if not self.project_data:
             raise ValueError(f"No project found with DOI: {self.doi}")
@@ -23,6 +80,9 @@ class NeuroxLink:
         self.figures = []
         self.citations = []
         self.parse_mdast(self.mdast)
+        self._print_info()
+
+    def _print_info(self):
         doi = f"🌺 {self.doi} 🌺"
         print(doi)
         print(self._create_underline(doi))
@@ -32,25 +92,13 @@ class NeuroxLink:
 
     def _create_underline(self, text: str) -> str:
         return "〰️" * math.ceil(len(text) / 2)
-        
-    def _fetch_config_data(self) -> Dict[str, Any]:
-        config_url = f"{self.cdn_url}/config.json"
-        return self._get_json(config_url)
 
-    def _find_project_by_doi(self, projects: List[Dict[str, Any]], doi: str) -> Optional[Dict[str, Any]]:
+    @staticmethod
+    def _find_project_by_doi(projects: List[Dict[str, Any]], doi: str) -> Optional[Dict[str, Any]]:
         return next((project for project in projects if project.get('doi') == doi), None)
 
     def _fetch_article_data(self) -> Dict[str, Any]:
         content_url = f"{self.cdn_url}/content/{self.project_data['slug']}/{self.project_data['index']}.json"
-        return self._get_json(content_url)
-
-    def _fetch_data(self) -> Dict[str, Any]:
-        config_url = f"{self.cdn_url}/config.json"
-        config_data = self._get_json(config_url)
-        project = self._find_by_doi(config_data['projects'], self.doi)
-        if not project:
-            raise ValueError(f"No project found with DOI: {self.doi}")
-        content_url = f"{self.cdn_url}/content/{project['slug']}/{project['index']}.json"
         return self._get_json(content_url)
 
     @staticmethod
@@ -59,16 +107,12 @@ class NeuroxLink:
         response.raise_for_status()
         return response.json()
 
-    @staticmethod
-    def _find_by_doi(projects: List[Dict[str, Any]], doi: str) -> Optional[Dict[str, Any]]:
-        for project in projects:
-            if project.get('doi') == doi:
-                return project
-        return None
-        
-    def set_cdn_url(self,url):
+    def set_cdn_url(self, url):
         self.cdn_url = url
-        
+        self.data = self._fetch_article_data()
+        self.mdast = self.data.get('mdast', {})
+        self.parse_mdast(self.mdast)
+
     def get_title(self) -> str:
         title = self.project_data.get('title', '')
         subtitle = self.project_data.get('subtitle', '')
@@ -231,18 +275,97 @@ class NeuroxLink:
                 return fig
         return None
 
-    def create_plotly_figure(self, label: str) -> Optional[go.Figure]:
+    # def get_plotly_figure(self, label: str) -> Optional[go.Figure]:
+    #     fig_data = self.get_plotly_figure_by_label(label)
+    #     if fig_data and 'plotly_data' in fig_data:
+    #         plotly_data = fig_data['plotly_data']
+    #         if isinstance(plotly_data, dict):
+    #             if 'content' in plotly_data:
+    #                 return go.Figure(json.loads(plotly_data['content']))
+    #             elif 'data' in plotly_data:
+    #                 return go.Figure(plotly_data['data'])
+    #         elif isinstance(plotly_data, str):
+    #             return go.Figure(json.loads(plotly_data))
+    #     return None
+
+    def get_plotly_obj(self, label: str) -> Optional[go.Figure]:
         fig_data = self.get_plotly_figure_by_label(label)
         if fig_data and 'plotly_data' in fig_data:
             plotly_data = fig_data['plotly_data']
-            if isinstance(plotly_data, dict):
-                if 'content' in plotly_data:
-                    return go.Figure(json.loads(plotly_data['content']))
-                elif 'data' in plotly_data:
-                    return go.Figure(plotly_data['data'])
-            elif isinstance(plotly_data, str):
-                return go.Figure(json.loads(plotly_data))
+            
+            # Ensure plotly_data is a dictionary
+            if isinstance(plotly_data, str):
+                plotly_data = json.loads(plotly_data)
+            
+            # Handle 'content' key
+            if isinstance(plotly_data, dict) and 'content' in plotly_data:
+                return go.Figure(json.loads(plotly_data['content']))
+            
+            # Initialize figure
+            fig = go.Figure()
+            
+            # Add traces
+            if isinstance(plotly_data, list):
+                fig.add_traces(plotly_data)
+            elif isinstance(plotly_data, dict):
+                if 'data' in plotly_data:
+                    fig.add_traces(plotly_data['data'])
+                
+                # Update layout
+                if 'layout' in plotly_data:
+                    fig.update_layout(plotly_data['layout'])
+                
+                # Add buttons and other features
+                if 'buttons' in plotly_data:
+                    updatemenus = []
+                    for button in plotly_data['buttons']:
+                        updatemenus.append({
+                            'buttons': [
+                                {
+                                    'args': button['args'],
+                                    'label': button['label'],
+                                    'method': button['method']
+                                }
+                            ],
+                            'direction': 'down',
+                            'showactive': True,
+                        })
+                    fig.update_layout(updatemenus=updatemenus)
+            
+            return fig
         return None
+    
+    def get_plotly_data(self, label: str) -> Optional[pd.DataFrame]:
+        fig = self.get_plotly_obj(label)
+        if fig is None:
+            return None
+
+        data_list = []
+        for trace in fig.data:
+            trace_data = {}
+            if hasattr(trace, 'x'):
+                trace_data['x'] = trace.x
+            if hasattr(trace, 'y'):
+                trace_data['y'] = trace.y
+            if hasattr(trace, 'z'):
+                trace_data['z'] = trace.z
+            
+            # Handle cases where x, y, or z might be None
+            for key in ['x', 'y', 'z']:
+                if key not in trace_data:
+                    trace_data[key] = [None] * max(len(trace_data.get('x', [])), 
+                                                   len(trace_data.get('y', [])), 
+                                                   len(trace_data.get('z', [])))
+            
+            data_list.append(pd.DataFrame(trace_data))
+
+        if not data_list:
+            return None
+
+        # Combine all traces into a single DataFrame
+        combined_df = pd.concat(data_list, keys=range(len(data_list)))
+        combined_df.index.names = ['trace', 'point']
+        return combined_df
 
     def extract_caption(self, html_id: str) -> str:
         def search_caption(node):
@@ -250,7 +373,6 @@ class NeuroxLink:
                 if node.get('type') == 'paragraph':
                     for child in node.get('children', []):
                         if child.get('type') == 'crossReference' and child.get('identifier') == html_id:
-                            # Found the reference, now get the text of the paragraph
                             return self.extract_text(node)
                 for value in node.values():
                     result = search_caption(value)
@@ -279,5 +401,4 @@ class NeuroxLink:
                 html_id = fig['html_id']
                 caption = self.extract_caption(html_id)
                 print(f"- html-link [{label}] enumerated as (Figure {enumerator})")
-                #print(f"  Caption: {caption}")
                 print()

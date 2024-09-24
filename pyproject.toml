@@ -20,7 +20,9 @@ classifiers = [
 ]
 dependencies = [
     "requests",
-    "plotly"
+    "plotly",
+    "pandas",
+    "numpy"
 ]
 
 [project.urls]
