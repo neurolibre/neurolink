@@ -282,7 +282,54 @@ class Paper:
     #             return go.Figure(json.loads(plotly_data))
     #     return None
 
-    def create_plotly_object_from(self, label: str) -> Optional[go.Figure]:
+    # def create_plotly_object_from(self, label: str) -> Optional[go.Figure]:
+    #     fig_data = self.get_plotly_figure_by_label(label)
+    #     if fig_data and 'plotly_data' in fig_data:
+    #         plotly_data = fig_data['plotly_data']
+            
+    #         # Ensure plotly_data is a dictionary
+    #         if isinstance(plotly_data, str):
+    #             plotly_data = json.loads(plotly_data)
+            
+    #         # Handle 'content' key
+    #         if isinstance(plotly_data, dict) and 'content' in plotly_data:
+    #             return go.Figure(json.loads(plotly_data['content']))
+            
+    #         # Initialize figure
+    #         fig = go.Figure()
+            
+    #         # Add traces
+    #         if isinstance(plotly_data, list):
+    #             fig.add_traces(plotly_data)
+    #         elif isinstance(plotly_data, dict):
+    #             if 'data' in plotly_data:
+    #                 fig.add_traces(plotly_data['data'])
+                
+    #             # Update layout
+    #             if 'layout' in plotly_data:
+    #                 fig.update_layout(plotly_data['layout'])
+                
+    #             # Add buttons and other features
+    #             if 'buttons' in plotly_data:
+    #                 updatemenus = []
+    #                 for button in plotly_data['buttons']:
+    #                     updatemenus.append({
+    #                         'buttons': [
+    #                             {
+    #                                 'args': button['args'],
+    #                                 'label': button['label'],
+    #                                 'method': button['method']
+    #                             }
+    #                         ],
+    #                         'direction': 'down',
+    #                         'showactive': True,
+    #                     })
+    #                 fig.update_layout(updatemenus=updatemenus)
+            
+    #         return fig
+    #     return None
+    
+    def create_plotly_object_from(self, label: str, select_trace_type: Optional[str] = None, select_trace_mode: Optional[str] = None) -> Optional[go.Figure]:
         fig_data = self.get_plotly_figure_by_label(label)
         if fig_data and 'plotly_data' in fig_data:
             plotly_data = fig_data['plotly_data']
@@ -298,12 +345,18 @@ class Paper:
             # Initialize figure
             fig = go.Figure()
             
-            # Add traces
+            # Add traces conditionally
             if isinstance(plotly_data, list):
-                fig.add_traces(plotly_data)
+                for trace in plotly_data:
+                    if (select_trace_type and trace.get('type') != select_trace_type) or (select_trace_mode and trace.get('mode') != select_trace_mode):
+                        continue
+                    fig.add_trace(trace)
             elif isinstance(plotly_data, dict):
                 if 'data' in plotly_data:
-                    fig.add_traces(plotly_data['data'])
+                    for trace in plotly_data['data']:
+                        if (select_trace_type and trace.get('type') != select_trace_type) or (select_trace_mode and trace.get('mode') != select_trace_mode):
+                            continue
+                        fig.add_trace(trace)
                 
                 # Update layout
                 if 'layout' in plotly_data:
@@ -329,13 +382,16 @@ class Paper:
             return fig
         return None
     
-    def get_plotly_data(self, label: str) -> Optional[pd.DataFrame]:
-        fig = self.create_plotly_object_from(label)
+    def get_plotly_data(self, label: str, select_trace_type: Optional[str] = None, select_trace_mode: Optional[str] = None) -> Optional[pd.DataFrame]:
+        fig = self.create_plotly_object_from(label, select_trace_type, select_trace_mode)
         if fig is None:
             return None
 
         data_list = []
         for trace in fig.data:
+            # Filter by type and mode if specified
+            if (select_trace_type and getattr(trace, 'type', None) != select_trace_type) or (select_trace_mode and getattr(trace, 'mode', None) != select_trace_mode):
+                continue
             trace_data = {}
             if hasattr(trace, 'x'):
                 trace_data['x'] = trace.x
@@ -343,6 +399,10 @@ class Paper:
                 trace_data['y'] = trace.y
             if hasattr(trace, 'z'):
                 trace_data['z'] = trace.z
+            if hasattr(trace, 'type'):
+                trace_data['type'] = trace.type
+            if hasattr(trace, 'mode'):
+                trace_data['mode'] = trace.mode
             
             # Handle cases where x, y, or z might be None
             for key in ['x', 'y', 'z']:
